@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: cloud-stream-1
+  
+  cloud:    stream:      bindings:        bookCreateInput:
+          destination: book.create.input
+          group: g1
+        bookCreateOutput:
+          destination: book.create.output
+        bookCreationOutput:
+          destination: book.create.input
+      kafka:        binder:          brokers:          - localhost:9092
+          
+    
+server:
+  port: 8021  servlet:    context-path: /cloud-stream-1
+    
+logging:  level:    com.example.demo1: DEBUG
