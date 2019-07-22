@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: cloud-stream-2
+    
+  cloud:    stream:      bindings:
+        phraseOutput:
+          destination: phrase.data
+#          producer:#            header-mode: none
+        phraseInput:
+          destination: phrase.data
+          group: g1
+#          consumer:#            header-mode: none
+        phraseStreamingInput:
+          destination: phrase.data
+          group: g2
+#          consumer:#            header-mode: none
+        totalPhraseStreamingOutput:
+          destination: phrase.count
+#          producer:#            header-mode: none
+#            use-native-encoding: true
+        totalPhraseStreamingIntput:
+          destination: phrase.count
+          group: g3
+#          consumer:#            header-mode: none
+#            use-native-decoding: true
+      kafka:        binder:          brokers:          - localhost:9092
+#        bindings:#          phraseOutput:
+#            producer:#              
+        streams:
+#          bindings:
+#            phraseStreamingInput:
+#              consumer:#                keySerde: org.springframework.kafka.support.serializer.JsonSerde
+#                valueSerde: org.springframework.kafka.support.serializer.JsonSerde#            totalPhraseStreamingOutput:
+#              producer:#                keySerde: org.apache.kafka.common.serialization.Serdes$StringSerde
+#                valueSerde: org.springframework.kafka.support.serializer.JsonSerde
+#            totalPhraseStreamingIntput:
+#              consumer:#                keySerde: org.apache.kafka.common.serialization.Serdes$StringSerde
+#                valueSerde: org.springframework.kafka.support.serializer.JsonSerde          binder:
+#            serde-error: logandfail            configuration:              default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              commit.interval.ms: 1000
+
+server:  port: 8052
+  servlet:    context-path: /${spring.application.name}
+           
+logging:  level:    com.example.demo2: debug
+    org.springframework.cloud.stream: error
