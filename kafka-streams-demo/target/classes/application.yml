@@ -1,0 +1,58 @@
+
+server:
+  port: 8061
+  
+
+spring:
+  application:
+    name: ksdemo
+    
+  cloud:
+    stream:
+      function:        definition: log;count
+      bindings:
+        voteOut:
+          destination: event.vote
+          producer:
+            header-mode: headers            use-native-encoding: true
+        log-in-0:
+          destination: event.vote
+          group: loggers
+          consumer:            header-mode: headers
+        count-in-0:
+          destination: event.vote
+          group: counters
+          consumer:            header-mode: headers
+            use-native-decoding: true
+        count-out-0:
+          destination: event.vote.count
+          producer:            header-mode: headers
+            use-native-encoding: true
+      kafka:
+        bindings:          voteOut:
+            producer:              configuration:
+                key.serializer: org.apache.kafka.common.serialization.StringSerializer
+                value.serializer: org.springframework.kafka.support.serializer.JsonSerializer
+        binder:
+          brokers:
+          - kafka.sgrd.reniec.gob.pe
+        streams:
+          bindings:
+            count-in-0:
+              consumer:                keySerde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                valueSerde: org.springframework.kafka.support.serializer.JsonSerde            count-out-0:
+              producer:                keySerde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                valueSerde: org.apache.kafka.common.serialization.Serdes$LongSerde
+          binder:
+            brokers:
+            - kafka.sgrd.reniec.gob.pe
+            functions:
+              log:
+                application-id: logapp              count:
+                application-id: countapp
+            deserialization-exception-handler: logandfail
+            configuration:
+              commit.interval.ms: 1000
+              default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              spring.json.trusted.packages: '*'
