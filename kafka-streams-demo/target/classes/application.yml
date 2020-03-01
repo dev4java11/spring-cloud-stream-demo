@@ -9,7 +9,7 @@ spring:
     
   cloud:
     stream:
-      function:        definition: log;count
+      function:        definition: log;count;logcount
       bindings:
         voteOut:
           destination: event.vote
@@ -28,6 +28,10 @@ spring:
           destination: event.vote.count
           producer:            header-mode: headers
             use-native-encoding: true
+        logcount-in-0:
+          destination: event.vote.count
+          consumer:            header-mode: headers
+            use-native-decoding: true
       kafka:
         bindings:          voteOut:
             producer:              configuration:
@@ -35,21 +39,26 @@ spring:
                 value.serializer: org.springframework.kafka.support.serializer.JsonSerializer
         binder:
           brokers:
-          - kafka.sgrd.reniec.gob.pe
+          - ubuntuvm:9094
         streams:
           bindings:
             count-in-0:
-              consumer:                keySerde: org.apache.kafka.common.serialization.Serdes$StringSerde
-                valueSerde: org.springframework.kafka.support.serializer.JsonSerde            count-out-0:
-              producer:                keySerde: org.apache.kafka.common.serialization.Serdes$StringSerde
-                valueSerde: org.apache.kafka.common.serialization.Serdes$LongSerde
+              consumer:                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                value-serde: org.springframework.kafka.support.serializer.JsonSerde            count-out-0:
+              producer:                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                value-serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+            logcount-in-0:
+              consumer:                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                value-serde: org.apache.kafka.common.serialization.Serdes$LongSerde
           binder:
             brokers:
-            - kafka.sgrd.reniec.gob.pe
+            - ubuntuvm:9094
             functions:
               log:
                 application-id: logapp              count:
                 application-id: countapp
+              logcount:
+                application-id: logcountapp
             deserialization-exception-handler: logandfail
             configuration:
               commit.interval.ms: 1000
