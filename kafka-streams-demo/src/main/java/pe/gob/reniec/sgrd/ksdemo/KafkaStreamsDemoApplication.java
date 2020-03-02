@@ -10,12 +10,14 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.state.KeyValueIterator;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ import org.springframework.cloud.stream.annotation.Output;
 import org.springframework.cloud.stream.binder.kafka.streams.InteractiveQueryService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.support.MessageBuilder;
@@ -47,6 +50,10 @@ public class KafkaStreamsDemoApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(KafkaStreamsDemoApplication.class, args);
+	}
+	
+	public class VoteCountEvtSerde extends JsonSerde<VoteCountEvt> {
+		
 	}
 
 	@Bean
@@ -82,24 +89,24 @@ public class KafkaStreamsDemoApplication {
 	}
 	
 	@Bean
-	public Function<KStream<String, VoteEvt>, KStream<String, Long>> count() {
+	public Function<KStream<String, VoteEvt>, KStream<String, VoteCountEvt>> count() {
 		return streamIn -> streamIn
 				.map((k, v) -> new KeyValue<>(v.getId() + "_" + v.getName(), new Long(0)))
 				.groupByKey(Grouped.with(Serdes.String(), Serdes.Long()))
-//				.groupByKey() <- ERROR
+//				.groupByKey() <- ERROR SERIALIZATION FOR MATERIALIZED VIEW MV_VOTE_COUNT
 				.count(Materialized.as(VoteBinding.MV_VOTE_COUNT))
-//				.count(Materialized
-//						.<String,Long,KeyValueStore<Bytes, byte[]>>as(VoteBinding.MV_VOTE_COUNT)
-//						.withKeySerde(Serdes.String())
-//						.withValueSerde(Serdes.Long()))
+				.mapValues((k, v) -> new VoteCountEvt(k.substring(0, k.indexOf("_")), k.substring(k.indexOf("_") + 1), v)
+						,Materialized.<String, VoteCountEvt, KeyValueStore<Bytes, byte[]>>as(VoteBinding.MV_VOTE_COUNT_JSON)
+						.withKeySerde(Serdes.String())
+						.withValueSerde(new VoteCountEvtSerde()))
 				.toStream();
 	}
 	
 	@Bean
-	public Consumer<KTable<String, Long>> logcount(){
+	public Consumer<KTable<String, VoteCountEvt>> logcount(){
 		return tableIn -> tableIn
 				.toStream()
-				.foreach((k, v) -> log.info("For : " + k.substring(k.indexOf("_") + 1) + " has : " + v + " votes."));
+				.foreach((k, v) -> log.info("total: " + v.toString()));
 	}
 	
 	@RestController
@@ -112,13 +119,11 @@ public class KafkaStreamsDemoApplication {
 		@GetMapping("/count")
 		public List<VoteCountEvt> count() {
 			List<VoteCountEvt> list = new ArrayList<VoteCountEvt>();
-			ReadOnlyKeyValueStore<String, Long> store =	interactiveQueryService.getQueryableStore(VoteBinding.MV_VOTE_COUNT, QueryableStoreTypes.keyValueStore());
-			KeyValueIterator<String, Long> iterator = store.all();
+			ReadOnlyKeyValueStore<String, VoteCountEvt> store =	interactiveQueryService.getQueryableStore(VoteBinding.MV_VOTE_COUNT_JSON, QueryableStoreTypes.keyValueStore());
+			KeyValueIterator<String, VoteCountEvt> iterator = store.all();
 			while(iterator.hasNext()) {
-				KeyValue<String, Long> kv = iterator.next();
-//				String k = new String(kv.key);
-				String k = kv.key;
-				list.add(new VoteCountEvt(k.substring(0, k.indexOf("_")), k.substring(k.indexOf("_") + 1), kv.value));
+				KeyValue<String, VoteCountEvt> kv = iterator.next();
+				list.add(kv.value);
 			}
 			return list;
 		}
@@ -127,6 +132,8 @@ public class KafkaStreamsDemoApplication {
 	public interface VoteBinding {
 		
 		public static final String MV_VOTE_COUNT = "mv-vote-count";
+		
+		public static final String MV_VOTE_COUNT_JSON = "mv-vote-count-json";
 		
 		public static final String VOTE_OUT = "voteOut";
 		

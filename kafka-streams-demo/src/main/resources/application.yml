@@ -46,10 +46,10 @@ spring:
               consumer:                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
                 value-serde: org.springframework.kafka.support.serializer.JsonSerde            count-out-0:
               producer:                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
-                value-serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+                value-serde: org.springframework.kafka.support.serializer.JsonSerde
             logcount-in-0:
               consumer:                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
-                value-serde: org.apache.kafka.common.serialization.Serdes$LongSerde
+                value-serde: org.springframework.kafka.support.serializer.JsonSerde
           binder:
             brokers:
             - ubuntuvm:9094
